@@ -72,33 +72,41 @@ select 字段1, 字段2, ... from 表1 union select 字段1, 字段2, ... from �
 
 ![image-20230302221436233](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022214280.png)
 
+访问网页界面，初始化数据库。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20230302221601162](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022216205.png)
 
 ## SQL注入基本方法
+
+**根据报错信息推断后台 SQL 语句**
+MySQL 语法错误的报错信息会显示部分 SQL 语句，Less-1 例题输入 id=1’的错误提示表面 SQL 语句中存在 '1'' LIMIT 0,1 ，由此推测完整语句如下：
+select * from 表1 where 列名=’$_GET[id]’；
+
+![image-20230302221645694](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022216748.png)
+
+**根据 order by 报错判断查询字段数**
+
+order by 跟数字表示按返回结果的第几个字段排序，数字超出返回字段数时报错。
+
+![image-20230302221709680](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022217720.png)
+
+**union select 联合查询，将所需信息打印到页面**
+
+![image-20230302221729438](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022217471.png)
+
+**information_schema 中常用的两张表：tables、columns**
+
+![image-20230302221743768](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022217814.png)
+
+![image-20230302221748630](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022217666.png)
+
+**注入得到表名和字段名**
+
+![image-20230302221809646](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022218694.png)
+
+**查询任意表的内容**
+
+![image-20230302221830426](https://raw.githubusercontent.com/countdracular/pic-md/main/202303022218490.png)
 
 ## 绕过过滤
 
