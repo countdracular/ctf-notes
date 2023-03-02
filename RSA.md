@@ -84,22 +84,209 @@ n = p*p*q
 
 # RSA 加密算法及其证明过程
 
-### 密钥生成
+## 密钥生成
 
 1. 找两个大素数p、q，计算N=pq。
 2. 欧拉函数φ(N)=φ(p)φ(q)=(p-1)(q-1)。
 3. 选取整数e，使e与φ(N)互质，求得e关于φ(N)的模逆元d（ed≡1(mod φ(N))）。
 4. 将p、q的记录销毁。
 
-### 加密消息
+（N, d) 为私钥，(N, e) 为公钥。
+
+## 加密消息
 
 $$
 c=m^e mod N
 $$
 
-### 解密消息
+## 解密消息
 
 $$
 m = c^d mod N
 $$
+
+## 正确性证明
+
+$$
+p、q 为素数，n = pq，e < φ(n) 且 e ⊥ φ(n)，m^e ≡ c(mod\space n)，求证 c^d ≡ m(mod\space n)，其中 d^{-1} ≡ e(mod\space φ(n))
+$$
+
+【实际应用中，明文被分段，参与运算的 m 始终小于 n，因此有 m^e%n = c，c^d%n = m】
+
+ 
+
+m^e = c + k*n
+
+m^(e*d) = (c + k*n)^d 
+
+右边 = c^d + k1*n
+
+1. m⊥n的情况，根据费马-欧拉定理，有
+
+左边 = m^(1+k2*φ(n)) = m*(m^k2)^φ(n)) = m*(1+k3*n) = m + k4*n 
+
+得 c^d + k1*n = m + k4*n
+
+即 c^d ≡ m(mod n)
+
+2. m与n 不互质的情况，假设 m = k5p，则 m⊥q，根据费马-欧拉定理，有
+
+左边 = m*(m^(k2*φ(p)))^φ(q) = m*(1+k6*q) = m + k6*k5*p*q = m + k7*n
+
+得 c^d + k1*n = m + k7*n
+
+得 c^d ≡ m(mod n)
+
+# 破解相关算法及应用
+
+## 威尔逊定理应用——大数阶乘取模
+
+威尔逊定理 
+
+P为质数 等价于 (p-1)!≡-1(mod p)
+
+ 
+
+B!%A （A为质数）计算量很大，如果A和B比较接近，可以通过威尔逊定理计算。
+
+B<A的情况：
+
+\# 计算((B+1)…(A-2))%A
+
+def mod_wei(A,B):
+
+  mod = 1
+
+  for i in range(B+1,A-1):
+
+​    mod *= i
+
+​    mod %= A
+
+  return mod
+
+gmpy2.invert(mod_wei(A,B),A) 即为 B!%A
+
+ 
+
+推导过程：
+
+(A-1)!≡-1(mod A)
+
+B小于A，带入B
+
+(B!(B+1)…(A-2)(A-1))≡-1(mod A)
+
+定义 x=((B+1)…(A-2))%A
+
+(B!%A*x*(A-1)%A)≡-1(mod A)
+
+因 (A-1)≡-1(mod A)，有
+
+(B!%A*x)≡1(mod A)
+
+因此 B!%A为x关于A的模逆元 gmpy2.invert(x,A)
+
+即：gmpy2.invert(((B+1)*…*(A-2))%A, A)
+
+ 
+
+B>=A的情况：
+
+B!%A
+
+=((A-1)!*A*…*B)%A
+
+=0
+
+因数中出现了A，余数为0
+
+## 中国剩余定理——解同余方程
+
+今有物不知其数，三三数之剩二；五五数之剩三；七七数之剩二。问物几何?
+
+ 
+
+```python
+from functools import reduce
+import sympy
+
+def chinese_remainder(n, a):
+  sum = 0
+  prod = reduce(lambda a, b: a * b, n)
+  for n_i, a_i in zip(n, a):
+	p = prod // n_i
+	sum += a_i * sympy.invert(p, n_i) * p
+  return int(sum % prod)
+
+m = chinese_remainder([3,5,7], [2,3,2])
+assert(m%3==2)
+assert(m%5==3)
+assert(m%7==2)
+print(m)
+# 23
+```
+
+以上函数 chinese_remainder(n, a) 为标准的中国剩余定理求解，要求序列n中的模之间互素，否则报错。
+
+以下是另一版中国剩余定理的求解函数：
+
+```python
+from functools import reduce
+import gmpy2
+
+def CRT(mi, ai):
+  assert(reduce(gmpy2.gcd,mi)==1)
+  assert (isinstance(mi, list) and isinstance(ai, list))
+  M = reduce(lambda x, y: x * y, mi)
+  ai_ti_Mi = [a * (M // m) * gmpy2.invert(M // m, m) for (m, a) in zip(mi, ai)]
+  return reduce(lambda x, y: x + y, ai_ti_Mi) % M
+m = CRT([3,5,7], [2,3,2])
+assert(m%3==2)
+assert(m%5==3)
+assert(m%7==2)
+print(m)
+```
+
+\---------------------------------------------------------------
+
+模不互素的情况（手工推导求解）：
+
+经过推导，得到模互素（质数模）的同余方程，然后求解：
+
+```python
+#m = chinese_remainder([21,15], [2,8])
+# m%(3*7)=2 m%(3*5)=8
+# m%(3*7)%7=2%7 m%(3*7)%3=2%3 m%(3*5)%5=8%5
+# m%7=2 m%3=2 m%5=3
+m = CRT([7,3,5], [2,2,3])
+print(m)
+assert(m%21==2)
+assert(m%15==8)
+```
+
+\---------------------------------------------------------------
+
+模不互素的情况（直接求解）：
+
+```python
+import gmpy2
+
+def GCRT(mi, ai):
+  # mi,ai分别表示模数和取模后的值,都为列表结构
+  assert (isinstance(mi, list) and isinstance(ai, list))
+  curm, cura = mi[0], ai[0]
+  for (m, a) in zip(mi[1:], ai[1:]):
+	d = gmpy2.gcd(curm, m)
+	c = a - cura
+	assert (c % d == 0) #不成立则不存在解
+	K = c // d * gmpy2.invert(curm // d, m // d)
+	cura += curm * K
+	curm = curm * m // d
+	cura %= curm
+  return (cura % curm, curm) #(解,最小公倍数)
+f3,lcm = GCRT([21,15],[2,8])
+```
+
+n中的模不互素的情况，用GCRT(mi, ai)计算，返回特解f3和模的最小公倍数lcm。由这两项易得通解。
 
